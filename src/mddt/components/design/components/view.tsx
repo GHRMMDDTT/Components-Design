@@ -1,17 +1,15 @@
 import React from "react";
-import { CSSColor, CSSSize, CSSSizeNumeric$1, CSSSizeNumeric$2, CSSSizeNumeric$4 } from "../css-types";
+import { CSSColor, CSSSizeNumeric$1, CSSSizeNumeric$2, CSSSizeNumeric$4 } from "../css-types";
 
-export class View extends React.Component {
+export class View extends React.Component<ViewBinding, { backgroundColor?: CSSColor }> {
 	private constructor(binding: ViewBinding) {
 		super(binding)
-	}
-
-	public setBackgroundColor(backgroundColor: CSSColor): void {
-		(this.props as ViewBinding).backgroundColor = backgroundColor;
+		this.state = {
+			backgroundColor: this.props.backgroundColor
+		};
 	}
 
 	public static getTypeAttribute(any: any): "single" | "double" | "quadruple" | "double-double" | "quadruple-quadruple" | "nothing" {
-
 		if (typeof any === "string") return "single"
 
 		if (Array.isArray(any)) {
@@ -26,6 +24,14 @@ export class View extends React.Component {
 		}
 
 		return "nothing";
+	}
+
+	public setBackgroundColor(backgroundColor: CSSColor | undefined): void {
+		this.setState({ backgroundColor });
+	}
+
+	public getBackgroundColor(): string | undefined {
+		return this.getColorAttribute(this.state.backgroundColor);
 	}
 
 	protected getColorAttribute(color: any): string | undefined {
@@ -64,7 +70,7 @@ export class View extends React.Component {
 				) {
 					return "hsl";
 				}
-				
+
 				if (
 					color.length >= 3 &&
 					((
@@ -72,10 +78,10 @@ export class View extends React.Component {
 						/^\d{1,3}$/.test(color[1]) &&
 						/^\d{1,3}$/.test(color[2])
 					) || (
-						/^\d{1,3}%$/.test(color[0]) &&
-						/^\d{1,3}%$/.test(color[1]) &&
-						/^\d{1,3}%$/.test(color[2])
-					))
+							/^\d{1,3}%$/.test(color[0]) &&
+							/^\d{1,3}%$/.test(color[1]) &&
+							/^\d{1,3}%$/.test(color[2])
+						))
 				) {
 					return "rgb";
 				}
@@ -154,13 +160,12 @@ export class View extends React.Component {
 		}
 	}
 
-	protected getPaddingAttribute(padding: CSSSizeNumeric$1 | CSSSizeNumeric$2 | CSSSizeNumeric$4 | undefined): string | undefined {
+	protected getPaddingOrMarginAttribute(padding: CSSSizeNumeric$1 | CSSSizeNumeric$2 | CSSSizeNumeric$4 | undefined): string | undefined {
 		switch (View.getTypeAttribute(padding)) {
 			case 'double':
 			case 'quadruple': {
 				return (padding as Array<string>).join(" ");
 			}
-
 			case "nothing":
 			case "quadruple-quadruple":
 			case "double-double":
@@ -168,15 +173,8 @@ export class View extends React.Component {
 		}
 	}
 
-	public setPadding(padding: CSSSizeNumeric$1 | CSSSizeNumeric$2 | CSSSizeNumeric$4): void {
-		(this.props as ViewBinding).padding = padding;
-	}
-
 	public getAttribute(): React.CSSProperties {
 		const b = (this.props as ViewBinding);
-
-		console.log(b.backgroundColor);
-		console.log(this.getColorAttribute(b.backgroundColor));
 
 		let mapped: React.CSSProperties = {
 			// --- Size ---
@@ -184,10 +182,10 @@ export class View extends React.Component {
 			height: b.width,
 
 			// --- Padding ---
-			padding: this.getPaddingAttribute(b.padding),
+			padding: this.getPaddingOrMarginAttribute(b.padding),
+			margin: this.getPaddingOrMarginAttribute(b.padding),
 
-			backgroundColor: this.getColorAttribute(b.backgroundColor),
-			color: this.getColorAttribute(b.foregoundColor),
+			backgroundColor: this.getColorAttribute(this.state.backgroundColor),
 		};
 
 		return mapped;
@@ -198,7 +196,18 @@ export class View extends React.Component {
 
 		return {
 			id: b.name,
-			style: this.getAttribute()
+			style: this.getAttribute(),
+
+			onMouseDown: (event) => {
+				if (b !== undefined && b.onPressed !== undefined) {
+					b.onPressed(this);
+				}
+			},
+			onMouseUp: (event) => {
+				if (b !== undefined && b.onReleased !== undefined) {
+					b.onReleased(this);
+				}
+			}
 		}
 	}
 
@@ -214,23 +223,28 @@ export class View extends React.Component {
 	}
 
 	public static React(binding: ViewBinding): React.ReactElement {
-		return new View(binding).render();
+		return <View {...binding} />
 	};
 }
 
-interface ViewBinding {
+export interface ViewBinding {
 	// --- Size ---
 	width: CSSSizeNumeric$1;
 	height: CSSSizeNumeric$1;
 
 	// --- Padding ---
-	padding?: CSSSizeNumeric$1 | CSSSizeNumeric$2 | CSSSizeNumeric$4;
-	onPaddingChanged?: (olded: CSSSizeNumeric$1 | CSSSizeNumeric$2 | CSSSizeNumeric$4, newed: CSSSizeNumeric$1 | CSSSizeNumeric$2 | CSSSizeNumeric$4, view: View) => void;
+	padding?: CSSSizeNumeric$1 | CSSSizeNumeric$2 | CSSSizeNumeric$4 | undefined;
+
+	// --- Margin ---
+	margin?: CSSSizeNumeric$1 | CSSSizeNumeric$2 | CSSSizeNumeric$4 | undefined;
 
 	// --- Id ---
 	name?: string;
 
 	// --- color ---
-	backgroundColor?: CSSColor,
-	foregoundColor?: CSSColor,
+	backgroundColor?: CSSColor | undefined;
+
+	// -- listener --
+	onPressed?: (self: View) => void;
+	onReleased?: (self: View) => void;
 }
