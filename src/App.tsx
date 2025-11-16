@@ -1,18 +1,35 @@
 import './App.css';
-import { View } from './mddt/components/design/components/view';
+import { View } from './mddt/components/design/widgets/view';
+
+/*<CSS>
+	<CSSColor>
+		<CSSBackgroundColor value={'red'} />
+	</CSSColor>
+	<CSSPaddingLayout>
+		<CSSPadding value={'10px'} />
+		<CSSPadding value={'20px'} />
+	</CSSPaddingLayout>
+	<CSSMarginLayout>
+		<CSSMargin value={'50px'} />
+	</CSSMarginLayout>
+	<CSSAnimation>
+		<CSSAnimationRotation>
+			<CSSAnimationOnPreapre>
+				<To value='180'/>
+				<From value='0' />
+				<Duration value={'300'} />
+			</CSSAnimationOnPreapre>
+			<CSSAnimationOnProgress value={(self, animarionInMovement) => {
+				if (animarionInMovement.getIs() == '90') {
+					animarionInMovement.setRotation('180');
+				} // termina como el 270.
+			}} />
+		</CSSAnimationRotation>
+	</CSSAnimation>
+</CSS>*/
 
 export default function App() {
-	return <View.React
-		width='100px'
-		height='200px'
-		backgroundColor={'blue'}
-		margin={'50px'}
-		onPressed={(self) => {
-			self.setBackgroundColor("red");
-			console.log(`se cambio a: ${self.getBackgroundColor()}`)
-		}}
-		onReleased={(self) => {
-			self.setBackgroundColor("green");
-			console.log(`se cambio a: ${self.getBackgroundColor()}`)
-		}} />;
+	return <View
+		width='200px'
+		height='100px' />;
 }

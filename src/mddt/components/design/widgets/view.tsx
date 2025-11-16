@@ -1,33 +1,43 @@
-import React from "react";
-import { CSSColor, CSSSizeNumeric$1, CSSSizeNumeric$2, CSSSizeNumeric$4 } from "../css-types";
+import React, {  } from "react";
+import { CSSColorElement, CSSSizeNumeric$1$Element as CSSSizeNumeric$1$Element, CSSSizeNumeric$2$Element as CSSSizeNumeric$2$Element, CSSSizeNumeric$4$Element as CSSSizeNumeric$4$Element } from "../css-types-elements";
 
-export class View extends React.Component<ViewBinding, { backgroundColor?: CSSColor }> {
-	private constructor(binding: ViewBinding) {
+export class View extends React.Component<ViewBinding, {
+	width: CSSSizeNumeric$1$Element;
+	height: CSSSizeNumeric$1$Element;
+
+	backgroundColor?: CSSColorElement;
+	padding?: CSSSizeNumeric$1$Element | CSSSizeNumeric$2$Element | CSSSizeNumeric$4$Element | undefined;
+	margin?: CSSSizeNumeric$1$Element | CSSSizeNumeric$2$Element | CSSSizeNumeric$4$Element | undefined;
+}> {
+	public constructor(binding: ViewBinding) {
 		super(binding)
 		this.state = {
-			backgroundColor: this.props.backgroundColor
+			width: this.props.width,
+			height: this.props.height,
+			backgroundColor: this.props.backgroundColor,
+			padding: this.props.padding,
+			margin: this.props.margin
 		};
 	}
 
-	public static getTypeAttribute(any: any): "single" | "double" | "quadruple" | "double-double" | "quadruple-quadruple" | "nothing" {
-		if (typeof any === "string") return "single"
-
-		if (Array.isArray(any)) {
-			if (any.length === 2) {
-				if (Array.isArray(any[0]) && Array.isArray(any[1])) return "double-double";
-
-				return "double";
-			} else if (any.length === 4) {
-				if (Array.isArray(any[0]) && Array.isArray(any[1]) && Array.isArray(any[2]) && Array.isArray(any[3])) return "quadruple-quadruple";
-				return "quadruple";
-			}
-		}
-
-		return "nothing";
+	public setWidth(width: CSSSizeNumeric$1$Element): void {
+		this.setState({ width: width });
 	}
 
-	public setBackgroundColor(backgroundColor: CSSColor | undefined): void {
-		this.setState({ backgroundColor });
+	public getWidth(): string {
+		return this.state.width;
+	}
+
+	public setHeight(height: CSSSizeNumeric$1$Element): void {
+		this.setState({ height: height });
+	}
+
+	public getHeight(): string {
+		return this.state.height;
+	}
+
+	public setBackgroundColor(backgroundColor: CSSColorElement | undefined): void {
+		this.setState({ backgroundColor: backgroundColor });
 	}
 
 	public getBackgroundColor(): string | undefined {
@@ -160,30 +170,56 @@ export class View extends React.Component<ViewBinding, { backgroundColor?: CSSCo
 		}
 	}
 
-	protected getPaddingOrMarginAttribute(padding: CSSSizeNumeric$1 | CSSSizeNumeric$2 | CSSSizeNumeric$4 | undefined): string | undefined {
+	public setPadding(padding: CSSSizeNumeric$1$Element | CSSSizeNumeric$2$Element | CSSSizeNumeric$4$Element | undefined): void {
+		this.setState({ padding: padding });
+	}
+
+	public getPadding(): string | undefined {
+		return this.getPaddingOrMarginAttribute(this.state.padding);
+	}
+
+	public setMargin(margin: CSSSizeNumeric$1$Element | CSSSizeNumeric$2$Element | CSSSizeNumeric$4$Element | undefined): void {
+		this.setState({ margin: margin });
+	}
+
+	public getMargin(): string | undefined {
+		return this.getPaddingOrMarginAttribute(this.state.margin);
+	}
+
+	protected getPaddingOrMarginAttribute(padding: CSSSizeNumeric$1$Element | CSSSizeNumeric$2$Element | CSSSizeNumeric$4$Element | undefined): string | undefined {
 		switch (View.getTypeAttribute(padding)) {
 			case 'double':
 			case 'quadruple': {
 				return (padding as Array<string>).join(" ");
 			}
-			case "nothing":
-			case "quadruple-quadruple":
-			case "double-double":
+
+			case 'single': {
+				return padding as string;
+			}
+
+			case 'nothing':
+			case 'quadruple-quadruple':
+			case 'quadruple-double':
+			case 'double-double':
 			default: return undefined;
+
+			case 'unknwon':
 		}
 	}
 
 	public getAttribute(): React.CSSProperties {
 		const b = (this.props as ViewBinding);
 
+		console.log(this.state.width)
+
 		let mapped: React.CSSProperties = {
 			// --- Size ---
-			width: b.height,
-			height: b.width,
+			width: this.state.width,
+			height: this.state.height,
 
 			// --- Padding ---
-			padding: this.getPaddingOrMarginAttribute(b.padding),
-			margin: this.getPaddingOrMarginAttribute(b.padding),
+			padding: this.getPaddingOrMarginAttribute(this.state.padding),
+			margin: this.getPaddingOrMarginAttribute(this.state.margin),
 
 			backgroundColor: this.getColorAttribute(this.state.backgroundColor),
 		};
@@ -198,12 +234,12 @@ export class View extends React.Component<ViewBinding, { backgroundColor?: CSSCo
 			id: b.name,
 			style: this.getAttribute(),
 
-			onMouseDown: (event) => {
+			onMouseDown: () => {
 				if (b !== undefined && b.onPressed !== undefined) {
 					b.onPressed(this);
 				}
 			},
-			onMouseUp: (event) => {
+			onMouseUp: () => {
 				if (b !== undefined && b.onReleased !== undefined) {
 					b.onReleased(this);
 				}
@@ -215,34 +251,45 @@ export class View extends React.Component<ViewBinding, { backgroundColor?: CSSCo
 		return <div {...this.getPropertier()} />;
 	}
 
-	public static create(width: CSSSizeNumeric$1, height: CSSSizeNumeric$1): View {
-		return new View({
-			width,
-			height,
-		});
-	}
+	public static getTypeAttribute(any: any): "single" | "double" | "quadruple" | "double-double" | "quadruple-quadruple" | "quadruple-double" | "nothing" | "unknwon" {
+		if (typeof any === "string") return "single"
 
-	public static React(binding: ViewBinding): React.ReactElement {
-		return <View {...binding} />
-	};
+		if (Array.isArray(any)) {
+			if (any.length === 2) {
+				if (Array.isArray(any[0]) && Array.isArray(any[1])) return "double-double";
+
+				return "double";
+			} else if (any.length === 4) {
+				if (Array.isArray(any[0]) && Array.isArray(any[1]) && Array.isArray(any[2]) && Array.isArray(any[3])) {
+					if (any[0].length === 2 && any[1].length === 2 && any[2].length === 2 && any[3].length === 2) return "quadruple-double";
+					if (any[0].length === 4 && any[1].length === 4 && any[2].length === 4 && any[3].length === 4) return "quadruple-quadruple";
+					return "unknwon";
+				}
+				return "quadruple";
+			}
+		}
+
+		return "nothing";
+	}
 }
 
 export interface ViewBinding {
 	// --- Size ---
-	width: CSSSizeNumeric$1;
-	height: CSSSizeNumeric$1;
+	width: CSSSizeNumeric$1$Element;
+	height: CSSSizeNumeric$1$Element;
 
-	// --- Padding ---
-	padding?: CSSSizeNumeric$1 | CSSSizeNumeric$2 | CSSSizeNumeric$4 | undefined;
-
-	// --- Margin ---
-	margin?: CSSSizeNumeric$1 | CSSSizeNumeric$2 | CSSSizeNumeric$4 | undefined;
+	// --- Layout ---
+	padding?: CSSSizeNumeric$1$Element | CSSSizeNumeric$2$Element | CSSSizeNumeric$4$Element | undefined;
+	margin?: CSSSizeNumeric$1$Element | CSSSizeNumeric$2$Element | CSSSizeNumeric$4$Element | undefined;
 
 	// --- Id ---
 	name?: string;
 
+	// --- class ---
+	// classed?: ReactElement<ICSS>;
+
 	// --- color ---
-	backgroundColor?: CSSColor | undefined;
+	backgroundColor?: CSSColorElement | undefined;
 
 	// -- listener --
 	onPressed?: (self: View) => void;
