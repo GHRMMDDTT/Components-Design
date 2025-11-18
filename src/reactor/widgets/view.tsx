@@ -1,7 +1,9 @@
-import React, {  } from 'react';
-import { CSSColorElement, CSSElements, CSSSizeElement, CSSSizeNumeric$1$Element as CSSSizeNumeric$1$Element, CSSSizeNumeric$2$Element as CSSSizeNumeric$2$Element, CSSSizeNumeric$4$Element as CSSSizeNumeric$4$Element } from '../css-types-elements';
+import React, { ReactElement } from 'react';
+import { CSSColorElement, CSSSizeNumeric$1$Element as CSSSizeNumeric$1$Element, CSSSizeNumeric$2$Element as CSSSizeNumeric$2$Element, CSSSizeNumeric$4$Element as CSSSizeNumeric$4$Element } from '../components/css-types-elements';
+import { Component } from './widget';
+import { CSS } from '../components/css-types';
 
-export class View extends React.Component<ViewBinding, Partial<ViewBinding>> {
+export class View extends Component<ViewBinding> {
 	public constructor(binding: ViewBinding) {
 		super(binding)
 		this.state = binding;
@@ -418,7 +420,7 @@ export interface ViewBinding {
 	name?: string;
 
 	// --- class ---
-	// classed?: ReactElement<ICSS>;
+	classed?: ReactElement<typeof CSS>;
 
 	// --- color ---
 	backgroundColor?: CSSColorElement | undefined;

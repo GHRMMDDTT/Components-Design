@@ -1,5 +1,9 @@
 # Reactor
 
-Reactor is a **"Framework"** for create a UI easy & flexiblity!
+¡Bienvenido a la documentacion oficial de [**Reactor**](https://github.com/GHRMMDDTT/Reactor)!
 
-<img src="./logo.png" alt="Mi Logo" width="300">
+
+<p align="center">
+    <img src="./logo.png" alt="Mi Logo" width="150">
+    <img src="./Reactor.png" alt="Mi Logo" width="150">
+</p>
