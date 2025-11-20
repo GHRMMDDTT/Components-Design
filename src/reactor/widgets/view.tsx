@@ -1,12 +1,68 @@
-import React, { ReactElement } from 'react';
+import React, { CSSProperties, ReactElement } from 'react';
 import { CSSColorElement, CSSSizeNumeric$1$Element as CSSSizeNumeric$1$Element, CSSSizeNumeric$2$Element as CSSSizeNumeric$2$Element, CSSSizeNumeric$4$Element as CSSSizeNumeric$4$Element } from '../components/css-types-elements';
 import { Component } from './widget';
-import { CSS } from '../components/css-types';
+import { CSS, CSSColor, CSSColorBackground, CSSLayout, CSSMargin, CSSMarginLayout, CSSPadding, CSSPaddingLayout, ICSS } from '../components/css-types';
 
 export class View extends Component<ViewBinding> {
 	public constructor(binding: ViewBinding) {
 		super(binding)
 		this.state = binding;
+	}
+
+
+	public componentDidMount(): void {
+		if (this.props.name) {
+			this.setName(this.props.name);
+		}
+	}
+
+	public componentDidUpdate(prevProps: ViewBinding): void {
+		if (this.props.name !== prevProps.name) {
+			if (prevProps.name && View.viewsName[prevProps.name] === this) {
+				delete View.viewsName[prevProps.name];
+				View.notifyListeners();
+			}
+			if (this.props.name) {
+				this.setName(this.props.name);
+			}
+		}
+	}
+
+	public componentWillUnmount(): void {
+		if (this.props.name && View.viewsName[this.props.name] === this) {
+			delete View.viewsName[this.props.name];
+			View.notifyListeners();
+		}
+	}
+
+	private static viewsName: { [key: string]: View } = {};
+	private static listeners: (() => void)[] = [];
+
+	public static subscribe(listener: () => void): () => void {
+		this.listeners.push(listener);
+		return () => {
+			this.listeners = this.listeners.filter(l => l !== listener);
+		}
+	}
+
+	private static notifyListeners(): void {
+		this.listeners.forEach(listener => listener());
+	}
+
+	public static findViewByName(name: string): View | undefined {
+		return this.viewsName[name];
+	}
+
+	public static findAllViewsByName(name: string): View[] {
+		return Object.values(this.viewsName).filter((view) => view.props.name === name);
+	}
+
+	public setName(name: string): void {
+		this.setState({ name: name });
+		if (name) {
+			View.viewsName[name] = this;
+			View.notifyListeners();
+		}
 	}
 
 	public setWidth(width: CSSSizeNumeric$1$Element | undefined): void {
@@ -19,12 +75,26 @@ export class View extends Component<ViewBinding> {
 		})
 	}
 
+	public setOnWidthChanged(onWidthChanged: View.OnWidthChangedListener): void {
+		this.setState({ onWidthChanged: onWidthChanged });
+	}
+
 	public getWidth(): string | undefined {
 		return this.state.width;
 	}
 
 	public setHeight(height: CSSSizeNumeric$1$Element): void {
-		this.setState({ height: height ?? this.props.height });
+		this.setListenerChanged({
+			name: ['onHeightChanged', 'height'],
+			assignation: {
+				value: height,
+				type: { whatNormalized: 1 }
+			}
+		})
+	}
+
+	public setOnHeightChanged(onHeightChanged: View.OnHeightChangedListener): void {
+		this.setState({ onHeightChanged: onHeightChanged });
 	}
 
 	public getHeight(): string | undefined {
@@ -41,12 +111,16 @@ export class View extends Component<ViewBinding> {
 
 	public setPadding(padding: CSSSizeNumeric$1$Element | CSSSizeNumeric$2$Element | CSSSizeNumeric$4$Element | undefined): void {
 		this.setListenerChanged({
-			name: ['onPaddingChanged', 'padding'], 
+			name: ['onPaddingChanged', 'padding'],
 			assignation: {
 				value: padding,
 				type: { whatNormalized: 4 }
 			}
 		});
+	}
+
+	public setOnPaddingChanged(onPaddingChanged: View.OnPaddingChangedListener): void {
+		this.setState({ onPaddingChanged: onPaddingChanged });
 	}
 
 	public getPadding(): string | undefined {
@@ -63,33 +137,33 @@ export class View extends Component<ViewBinding> {
 		});
 	}
 
+	public setOnMarginChanged(onMarginChanged: View.OnMarginChangedListener): void {
+		this.setState({ onMarginChanged: onMarginChanged });
+	}
+
 	public getMargin(): string | undefined {
 		return this.getPaddingOrMarginAttribute(this.state.margin);
 	}
 
 	public getAttribute(): React.CSSProperties {
-		const b = (this.props as ViewBinding);
+		const b = this.CSSBuilding();
 
-		let mapped: React.CSSProperties = {
-			// --- Size ---
-			width: this.state.width,
-			height: this.state.height,
+		b.width = this.getWidth() ?? b.width;
+		b.height = this.getHeight() ?? b.height;
 
-			// --- Padding ---
-			padding: this.getPaddingOrMarginAttribute(this.state.padding),
-			margin: this.getPaddingOrMarginAttribute(this.state.margin),
+		b.padding = this.getPadding() ?? b.padding;
+		b.margin = this.getMargin() ?? b.margin;
 
-			backgroundColor: this.getColorAttribute(this.state.backgroundColor),
-		};
+		b.backgroundColor = this.getColorAttribute(this.state.backgroundColor) ?? b.backgroundColor;
 
-		return mapped;
+		return b;
 	}
 
 	public getPropertier(): React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> {
 		const b = (this.props as ViewBinding);
 
 		return {
-			id: b.name,
+			id: b.name ?? this.state.name,
 			style: this.getAttribute(),
 
 			tabIndex: 0,
@@ -118,6 +192,105 @@ export class View extends Component<ViewBinding> {
 
 	public render(): React.ReactElement {
 		return <div {...this.getPropertier()} />;
+	}
+
+	protected CSSBuilding(): CSSProperties {
+		let css: CSSProperties = {};
+
+		if (this.props && this.props.classed) {
+			if (this.props.classed.type !== CSS) {
+				throw new Error("Only the type '<CSS>...</CSS>' can be used; any other type of value is not valid.");
+			}
+			const ICSS = this.props.classed?.props;
+
+			this.isArrayAndForEach(ICSS.children, (child) => {
+				if (child.type !== CSSColor) {
+					throw new Error("Only the type '<CSSColor>...</CSSColor>' can be used; any other type of value is not valid.");
+				} else if (child.type !== CSSLayout) {
+					throw new Error("Only the type '<CSSLayout>...</CSSLayout>' can be used; any other type of value is not valid.");
+				}
+
+				if (child.type === CSSColor) {
+					const ICSSColor = child.props;
+					this.isArrayAndForEach(ICSSColor.children, (child) => {
+						if (child.type !== CSSColorBackground) {
+							throw new Error("Only the type '<CSSColorBackground>...</CSSColorBackground>' can be used; any other type of value is not valid.");
+						}
+
+						const ICSSColorBackground = child.props;
+						css.backgroundColor = this.getColorAttribute(ICSSColorBackground.color);
+					}, (element) => {
+						if (element.type !== CSSColorBackground) {
+							throw new Error("Only the type '<CSSColorBackground>...</CSSColorBackground>' can be used; any other type of value is not valid.");
+						}
+
+						const ICSSColorBackground = element.props;
+						css.backgroundColor = this.getColorAttribute(ICSSColorBackground.color);
+					});
+				} else if (child.type === CSSLayout) {
+					const ICSSLayout = child.props;
+					this.isArrayAndForEach(ICSSLayout.children, (child) => {
+						if (child.type !== CSSPaddingLayout) {
+							throw new Error("Only the type '<CSSPaddingLayout>...</CSSPaddingLayout>' can be used; any other type of value is not valid.");
+						}
+
+						if (child.type === CSSPaddingLayout) {
+							const ICSSPaddingLayout = child.props;
+							if (Array.isArray(ICSSPaddingLayout.children)) {
+								if (child.type !== CSSPadding) {
+									throw new Error("Only the type '<CSSPadding>...</CSSPadding>' can be used; any other type of value is not valid.");
+								}
+
+								if (ICSSPaddingLayout.children.length === 2) {
+									css.padding = this.getPaddingOrMarginAttribute(ICSSPaddingLayout.children);
+								} else if (ICSSPaddingLayout.children.length === 4) {
+									css.padding = this.getPaddingOrMarginAttribute(ICSSPaddingLayout.children);
+								}
+							} else {
+								css.padding = this.getPaddingOrMarginAttribute(ICSSPaddingLayout.children);
+							}
+						} else if (child.type === CSSMarginLayout) {
+							const ICSSMarginLayout = child.props;
+							if (Array.isArray(ICSSMarginLayout.children)) {
+								if (child.type !== CSSMargin) {
+									throw new Error("Only the type '<CSSMargin>...</CSSMargin>' can be used; any other type of value is not valid.");
+								}
+
+								if (ICSSMarginLayout.children.length === 2) {
+									css.margin = this.getPaddingOrMarginAttribute(ICSSMarginLayout.children);
+								} else if (ICSSMarginLayout.children.length === 4) {
+									css.margin = this.getPaddingOrMarginAttribute(ICSSMarginLayout.children);
+								}
+							} else {
+								css.margin = this.getPaddingOrMarginAttribute(ICSSMarginLayout.children);
+							}
+						}
+					});
+				}
+			})
+		}
+
+		return css;
+	}
+
+	protected isArrayAndForEach(element: any, callbackArray: (item: any) => void, callbackObject?: (item: any) => void): void {
+		if (Array.isArray(element)) {
+			element.forEach((item) => {
+				callbackArray(item);
+			})
+		}
+		else {
+			callbackObject?.(element);
+		}
+	}
+
+	protected isArray(element: any, callbackArray: (item: Array<any>) => void, callbackObject?: (item: any) => void): void {
+		if (Array.isArray(element)) {
+			callbackArray(element);
+		}
+		else {
+			callbackObject?.(element);
+		}
 	}
 
 	protected getColorAttribute(color: any): string | undefined {
@@ -277,7 +450,7 @@ export class View extends Component<ViewBinding> {
 		}
 	}) {
 		if (_.assignation.type === "boolean") {
-			const [keyListener, ] = _.name;
+			const [keyListener,] = _.name;
 
 			const oldNormalized = _.assignation.value;
 
@@ -318,48 +491,29 @@ export class View extends Component<ViewBinding> {
 		}
 	}
 
-	public static getTypeAttribute(any: any): 'single' | 'double' | 'quadruple' | 'double-double' | 'quadruple-quadruple' | 'quadruple-double' | 'nothing' | 'unknwon' {
-		if (typeof any === 'string') return 'single'
-
-		if (Array.isArray(any)) {
-			if (any.length === 2) {
-				if (Array.isArray(any[0]) && Array.isArray(any[1])) return 'double-double';
-
-				return 'double';
-			} else if (any.length === 4) {
-				if (Array.isArray(any[0]) && Array.isArray(any[1]) && Array.isArray(any[2]) && Array.isArray(any[3])) {
-					if (any[0].length === 2 && any[1].length === 2 && any[2].length === 2 && any[3].length === 2) return 'quadruple-double';
-					if (any[0].length === 4 && any[1].length === 4 && any[2].length === 4 && any[3].length === 4) return 'quadruple-quadruple';
-					return 'unknwon';
-				}
-				return 'quadruple';
-			}
-		}
-
-		return 'nothing';
-	}
-
 	private normalize$4(value: any | undefined): [string, string, string, string] {
-		{if (value === undefined || value === null) {
+		{
+			if (value === undefined || value === null) {
+				return ['0px', '0px', '0px', '0px'];
+			}
+
+			if (typeof value === 'string') {
+				return [value, value, value, value];
+			}
+
+			if (Array.isArray(value)) {
+				switch (value.length) {
+					case 2:
+						return [value[0], value[1], value[0], value[1]];
+					case 4:
+						return [value[0], value[1], value[2], value[3]];
+					default:
+						return ['0px', '0px', '0px', '0px'];
+				}
+			}
+
 			return ['0px', '0px', '0px', '0px'];
 		}
-
-		if (typeof value === 'string') {
-			return [value, value, value, value];
-		}
-
-		if (Array.isArray(value)) {
-			switch (value.length) {
-				case 2:
-					return [value[0], value[1], value[0], value[1]];
-				case 4:
-					return [value[0], value[1], value[2], value[3]];
-				default:
-					return ['0px', '0px', '0px', '0px'];
-			}
-		}
-
-		return ['0px', '0px', '0px', '0px'];}
 	}
 
 	private normalize$2(value: any | undefined): [string, string] {
@@ -382,6 +536,27 @@ export class View extends Component<ViewBinding> {
 
 		return ['0px', '0px'];
 	}
+
+	public static getTypeAttribute(any: any): 'single' | 'double' | 'quadruple' | 'double-double' | 'quadruple-quadruple' | 'quadruple-double' | 'nothing' | 'unknwon' {
+		if (typeof any === 'string') return 'single'
+
+		if (Array.isArray(any)) {
+			if (any.length === 2) {
+				if (Array.isArray(any[0]) && Array.isArray(any[1])) return 'double-double';
+
+				return 'double';
+			} else if (any.length === 4) {
+				if (Array.isArray(any[0]) && Array.isArray(any[1]) && Array.isArray(any[2]) && Array.isArray(any[3])) {
+					if (any[0].length === 2 && any[1].length === 2 && any[2].length === 2 && any[3].length === 2) return 'quadruple-double';
+					if (any[0].length === 4 && any[1].length === 4 && any[2].length === 4 && any[3].length === 4) return 'quadruple-quadruple';
+					return 'unknwon';
+				}
+				return 'quadruple';
+			}
+		}
+
+		return 'nothing';
+	}
 }
 
 export namespace View {
@@ -400,14 +575,19 @@ export namespace View {
 	export interface OnFocusChangedListener {
 		onFocusChanged(isFocused: boolean): void;
 	}
+
+	export interface OnHeightChangedListener {
+		onHeightChanged(olded: string, newes: string): void;
+	}
 }
 
 export interface ViewBinding {
 	// --- Size ---
 	width: CSSSizeNumeric$1$Element;
 	onWidthChanged?: View.OnWidthChangedListener;
-	
+
 	height: CSSSizeNumeric$1$Element;
+	onHeightChanged?: View.OnHeightChangedListener;
 
 	// --- Layout ---
 	padding?: CSSSizeNumeric$1$Element | CSSSizeNumeric$2$Element | CSSSizeNumeric$4$Element | undefined;
@@ -420,7 +600,7 @@ export interface ViewBinding {
 	name?: string;
 
 	// --- class ---
-	classed?: ReactElement<typeof CSS>;
+	classed?: ReactElement<ICSS>;
 
 	// --- color ---
 	backgroundColor?: CSSColorElement | undefined;

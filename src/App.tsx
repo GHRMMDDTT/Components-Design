@@ -1,33 +1,27 @@
 import React from 'react';
 import './App.css';
 import { View } from './reactor/widgets/view';
-import { CSS, CSSColor, CSSColorBackground } from './reactor/components/css-types';
+import { useView } from './reactor/hooks/use-view';
 
 export default function App(): React.ReactElement {
+	const mainedView = useView('Mained');
+	const mainedView2 = useView('Mained2');
+
 	return (
-		<View
-			width='100px'
-			height='100px'
-			backgroundColor='red'
-			classed={
-				<CSS>
-					<CSSColor>
-						<CSSColorBackground color={'red'} />
-					</CSSColor>
-				</CSS>
-			}
-			onPressed={function(self: View): void {
-				self.setWidth('250px')
-			}}
-			onReleased={function(self: View): void {
-				self.setWidth(undefined)
-			}}
-			onWidthChanged={
-				{
-					onWidthChanged: function(old, news): void {
-						console.log('salida', old, news)
-					}
-				}
-			} />
-	);
+		<div>
+			<View
+				name='Mained'
+				width='500px'
+				height='100px'
+				backgroundColor={'red'}
+				// classed={ThemeLight.Mained}
+				onPressed={function (self: View): void {
+					self.setWidth('250px')
+				}}
+				onReleased={function (self: View): void {
+					self.setWidth(undefined)
+				}} />
+			<p>Width of Mained: {mainedView?.getWidth() ?? "Loading..."} & Width of Mained2: {mainedView2?.getWidth() ?? "Loading..."}!</p>
+		</div>
+	)
 }
