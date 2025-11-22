@@ -1,4 +1,4 @@
-import { CSSProperties, ReactElement } from "react";
+import { ReactElement } from "react";
 import { CSSColorElement, CSSSizeElement } from "./css-types-elements";
 
 let DIV_ELEMENT_EMPTY = <div />

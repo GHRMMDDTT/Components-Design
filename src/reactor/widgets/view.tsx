@@ -1,5 +1,5 @@
 import React, { CSSProperties, ReactElement } from 'react';
-import { CSSColorElement, CSSSizeNumeric$1$Element as CSSSizeNumeric$1$Element, CSSSizeNumeric$2$Element as CSSSizeNumeric$2$Element, CSSSizeNumeric$4$Element as CSSSizeNumeric$4$Element } from '../components/css-types-elements';
+import { CSSColorElement, CSSGravityElement, CSSSizeNumeric$1$Element, CSSSizeNumeric$2$Element, CSSSizeNumeric$4$Element } from '../components/css-types-elements';
 import { Component } from './widget';
 import { CSS, CSSColor, CSSColorBackground, CSSLayout, CSSMargin, CSSMarginLayout, CSSPadding, CSSPaddingLayout, ICSS } from '../components/css-types';
 
@@ -159,7 +159,7 @@ export class View extends Component<ViewBinding> {
 		return b;
 	}
 
-	public getPropertier(): React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement> {
+	public getPropertier(): React.DetailedHTMLProps<React.HTMLAttributes<HTMLCanvasElement>, HTMLCanvasElement> {
 		const b = (this.props as ViewBinding);
 
 		return {
@@ -167,8 +167,8 @@ export class View extends Component<ViewBinding> {
 			style: this.getAttribute(),
 
 			tabIndex: 0,
-			onMouseDown: () => b.onPressed?.(this),
-			onMouseUp: () => b.onReleased?.(this),
+			onMouseDown: () => b.onPressed?.(this), onTouchStart: () => b.onPressed?.(this),
+			onMouseUp: () => b.onReleased?.(this), onTouchEnd: () => b.onReleased?.(this),
 			onFocus: () => {
 				this.setListenerChanged({
 					name: ["onFocusChanged"],
@@ -191,7 +191,7 @@ export class View extends Component<ViewBinding> {
 	}
 
 	public render(): React.ReactElement {
-		return <div {...this.getPropertier()} />;
+		return <canvas {...this.getPropertier()} />;
 	}
 
 	protected CSSBuilding(): CSSProperties {
@@ -492,28 +492,26 @@ export class View extends Component<ViewBinding> {
 	}
 
 	private normalize$4(value: any | undefined): [string, string, string, string] {
-		{
-			if (value === undefined || value === null) {
-				return ['0px', '0px', '0px', '0px'];
-			}
-
-			if (typeof value === 'string') {
-				return [value, value, value, value];
-			}
-
-			if (Array.isArray(value)) {
-				switch (value.length) {
-					case 2:
-						return [value[0], value[1], value[0], value[1]];
-					case 4:
-						return [value[0], value[1], value[2], value[3]];
-					default:
-						return ['0px', '0px', '0px', '0px'];
-				}
-			}
-
+		if (value === undefined || value === null) {
 			return ['0px', '0px', '0px', '0px'];
 		}
+
+		if (typeof value === 'string') {
+			return [value, value, value, value];
+		}
+
+		if (Array.isArray(value)) {
+			switch (value.length) {
+				case 2:
+					return [value[0], value[1], value[0], value[1]];
+				case 4:
+					return [value[0], value[1], value[2], value[3]];
+				default:
+					return ['0px', '0px', '0px', '0px'];
+			}
+		}
+
+		return ['0px', '0px', '0px', '0px'];
 	}
 
 	private normalize$2(value: any | undefined): [string, string] {
@@ -584,17 +582,11 @@ export namespace View {
 export interface ViewBinding {
 	// --- Size ---
 	width: CSSSizeNumeric$1$Element;
-	onWidthChanged?: View.OnWidthChangedListener;
-
 	height: CSSSizeNumeric$1$Element;
-	onHeightChanged?: View.OnHeightChangedListener;
 
 	// --- Layout ---
 	padding?: CSSSizeNumeric$1$Element | CSSSizeNumeric$2$Element | CSSSizeNumeric$4$Element | undefined;
-	onPaddingChanged?: View.OnPaddingChangedListener;
-
 	margin?: CSSSizeNumeric$1$Element | CSSSizeNumeric$2$Element | CSSSizeNumeric$4$Element | undefined;
-	onMarginChanged?: View.OnMarginChangedListener;
 
 	// --- Id ---
 	name?: string;
@@ -609,5 +601,9 @@ export interface ViewBinding {
 	onPressed?: (self: View) => void;
 	onReleased?: (self: View) => void;
 
+	onWidthChanged?: View.OnWidthChangedListener;
+	onHeightChanged?: View.OnHeightChangedListener;
+	onPaddingChanged?: View.OnPaddingChangedListener;
+	onMarginChanged?: View.OnMarginChangedListener;
 	onFocusChanged?: View.OnFocusChangedListener;
 }
